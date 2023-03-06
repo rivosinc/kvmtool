@@ -1,0 +1,51 @@
+This series is an initial version of the support for running confidential VMs on
+riscv architecture. This is to get feedback on the proposed COVH, COVI and COVG
+extensions for running Confidential VMs on riscv. The specification is available
+here [0]. Make sure to build it to get the latest changes as it gets updated
+from time to time.
+
+We have added a new option, `--cove-vm` to the `run` command to mark the VM as
+a confidential VM.
+
+The host including the kernel and kvmtool, must not access any memory allocated
+to the confidential VM. The TSM is responsible for providing all the required
+information to handle faults and emulate devices.
+
+The series adds support to manage CoVE VMs, which includes:
+   * Configuration
+   * Creation of CoVE VM and VCPUs.
+   * Load initial memory images using measurement ioctls.
+   * Virtio support for CoVE VMs.
+
+We don't yet support APLIC and thus no line based interrupts. So we use pci
+transport for all the virtio devices. As serial and rtc devices are only mmio
+based so we don't yet support those as well.
+
+virtio for the CoVE enforces VIRTIO_F_ACCESS_PLATFORM flag to force SWIOTLB
+bounce buffers in confidential linux guest. The SWIOTLB buffers are shared
+with the host using share/unshare calls in COVG extension. Thus host can
+directly write to those buffers without TSM involvement.
+
+The patches are also available here:
+
+	https://github.com/rivosinc/kvmtool/commits/kvm_aptee_rfc
+
+Running a CoVE VM
+------------------
+
+Extra options needed:
+--cove-vm: Launches a confidential VM.
+--virtio-transport: We don't yet support MMIO devices so we need to
+                    force virtio device to use pci transport.
+
+
+ $ lkvm run						\
+	 --cove-vm					\
+	 --virtio-transport=pci                         \
+	 <normal-VM options>
+
+
+Links
+============
+[0] CoVE architecture Specification.
+    https://github.com/riscv-non-isa/riscv-ap-tee/blob/main/specification/riscv-aptee-spec.pdf
